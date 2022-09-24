@@ -1,6 +1,6 @@
 # ZmarterBoard
 
-Zmartboard es un scrapper e sincronizador de tareas de Zmartboard con Notion.
+Zmartboard es un scrapper para sincronizar de tareas de Zmartboard a Notion.
 
 Fue creado para trabajar con la información de Zmartboard de una mejor
 manera, dado que Zmartboard no tiene buen UI/UX y no tiene formas de filtrar
@@ -27,7 +27,7 @@ a Zmartboard, en el panel de Network del navegador.
 
 ### Notion
 
-Para notion, se necesita crear una vase de datos y una integración.
+Para Notion, se necesita crear una base de datos y una integración.
 
 La [sección de _getting started_ de la documentación de Notion](https://developers.notion.com/docs/getting-started)
 cubre como obtener `notion_key` y `notion_database_id` para poder usar la API.
@@ -38,7 +38,7 @@ La creación de columnas es automática, pero las vistas deberán ser creadas ma
 
 > **Nota**: funcionamiento bien preliminar
 
-Una vez clonado el repositorio, se puede instalar esta library con:
+Una vez clonado el repositorio, se puede instalar esta librería con:
 
 ```bash
 pnpm install -g ./zmartboard
@@ -60,3 +60,4 @@ zmarterboard sync     # para sincronizar los datos con Notion
 ## Por hacer
 
 - Guardar más datos, como tags y registro de horas trabajadas
+- Guías para hacer las vistas
