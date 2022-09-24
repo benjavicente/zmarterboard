@@ -59,5 +59,4 @@ zmarterboard sync     # para sincronizar los datos con Notion
 
 ## Por hacer
 
-- Solo actualizar páginas que han cambiado
-- Guardar más datos, como tags
+- Guardar más datos, como tags y registro de horas trabajadas

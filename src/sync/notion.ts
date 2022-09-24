@@ -1,81 +1,88 @@
+import _ from "lodash";
 import { Client } from "@notionhq/client";
-import { GetDatabaseResponse, UpdatePageParameters } from "@notionhq/client/build/src/api-endpoints.js";
-import { TaskWithRelations } from "../types.js";
-import { UpdateDatabaseProperties, zmarterboardProperties } from "./dbSchema.js";
+import { UpdatableProperties, zmarterboardProperties } from "./dbSchema.js";
 
-type Properties = GetDatabaseResponse["properties"];
-type UpdatablePageProperties = UpdatePageParameters["properties"];
+import type { GetDatabaseResponse, PageObjectResponse } from "@notionhq/client/build/src/api-endpoints.js";
+import type { TaskWithRelations } from "../types.js";
 
-function notionEmptyProperties(properties: Properties) {
-  const withEmptyProperties: UpdateDatabaseProperties = {};
-  for (const [key, value] of Object.entries(properties)) {
-    if (value.type !== "title" || key !== "id") withEmptyProperties[value.id] = null;
+export async function resetDatabasePropertiesIfInvalid(db: GetDatabaseResponse, notion: Client) {
+  const { id: database_id, properties } = db;
+  const remainingProperties = { ...zmarterboardProperties };
+  const toUpdateObj = {};
+
+  // Update the current properties in the Notion Database
+  for (const [name, property] of Object.entries(properties)) {
+    const zmarterboardProperty = remainingProperties[name];
+    if (zmarterboardProperty) {
+      if (!zmarterboardProperty[property.type]) {
+        // Incorrect property schema, should change
+        toUpdateObj[property.id] = zmarterboardProperty;
+      }
+      delete remainingProperties[name];
+    } else {
+      // Should be deleted
+      toUpdateObj[property.id] = null;
+    }
   }
-  return withEmptyProperties;
+  // Create missing properties
+  for (const [name, property] of Object.entries(remainingProperties)) {
+    if (property["title"]) continue;
+    toUpdateObj[name] = property;
+  }
+
+  if (Object.keys(toUpdateObj).length === 0) return;
+  console.info("Updating database properties");
+  await notion.databases.update({ database_id, properties: toUpdateObj });
 }
 
-export async function resetDatabaseProperties({ id: database_id, properties }: GetDatabaseResponse, notion: Client) {
-  const titleId = Object.keys(properties).find((key) => properties[key].type === "title") as string;
-  const propertiesToReset = { ...notionEmptyProperties(properties), [titleId]: { name: "name" } };
-  await notion.databases.update({ database_id, properties: propertiesToReset });
-  await notion.databases.update({ database_id, properties: zmarterboardProperties });
+const dateProperty = (date: Date) => ({ date: { start: date.toISOString(), time_zone: "Chile/Continental" } });
+
+const generatePageProperties = (task: TaskWithRelations): UpdatableProperties => ({
+  name: { title: [{ text: { content: task.name } }] },
+  id: { rich_text: [{ text: { content: task.id } }] },
+  position: { number: task.position },
+  completed: { checkbox: !!task.completed },
+  estimated_hours: { number: task.estimated_hours },
+  total_hours: { number: task.total_hours },
+  description: { rich_text: task.description ? [{ text: { content: task.description } }] : [] },
+  task_created_at: dateProperty(task.created_at),
+  priority: { number: task.priority },
+  members: { multi_select: task.assigned.map((member) => ({ name: member.name })) },
+  board: { select: { name: task.board.name } },
+  column: { select: { name: task.column.name } },
+  starting_date: task.starting_date ? dateProperty(task.starting_date) : undefined,
+  deadline: task.deadline ? dateProperty(task.deadline) : undefined,
+});
+
+export async function createTaskPage(database_id: string, task: TaskWithRelations, notion: Client) {
+  // @ts-ignore
+  await notion.pages.create({ parent: { database_id }, properties: generatePageProperties(task) });
+  return;
 }
 
-const updatableProperties = (task: TaskWithRelations) => {
-  const properties: UpdatablePageProperties = {
-    name: { title: [{ text: { content: task.name } }] },
-    completed: { checkbox: !!task.completed },
-    estimated_hours: { number: task.estimated_hours },
-    total_hours: { number: task.total_hours },
-    description: { rich_text: task.description ? [{ text: { content: task.description } }] : [] },
-    created_at: {
-      date: {
-        // TODO: Date timezone is not correct
-        start: task.created_at.toISOString(),
-        time_zone: "Chile/Continental",
-      },
-    },
-    priority: { number: task.priority },
-    members: {
-      multi_select: task.assigned.map((member) => ({
-        name: member.name,
-      })),
-    },
-    board: { select: { name: task.board.name } },
-    column: { select: { name: task.column.name } },
-  };
-  if (task.starting_date) {
-    properties.starting_date = {
-      date: {
-        start: task.starting_date.toISOString(),
-        time_zone: "Chile/Continental",
-      },
-    };
+const maxDelta = 1000 * 60 * 60 * 24; // 1 day
+function isSubsetConsideringDate(obj_set: {}, obj_that_might_be_subset: {}, type: string) {
+  if (type === "date") {
+    // Difference of only 12 hours is considered the same date
+    const delta = new Date(obj_set[type].start).getTime() - new Date(obj_that_might_be_subset[type].start).getTime();
+    return Math.abs(delta) < maxDelta;
   }
-  if (task.deadline) {
-    properties.ending_date = {
-      date: {
-        start: task.deadline.toISOString(),
-        time_zone: "Chile/Continental",
-      },
-    };
-  }
-  return properties;
-};
-
-export function createTaskPage(database_id: string, task: TaskWithRelations, notion: Client) {
-  return notion.pages.create({
-    parent: { database_id },
-    properties: {
-      id: { rich_text: [{ text: { content: task.id } }] },
-      ...updatableProperties(task),
-    },
-  });
+  return _.isMatch(obj_set[type], obj_that_might_be_subset[type]);
 }
 
-export function updateTaskPage(page_id: string, task: TaskWithRelations, notion: Client) {
-  return notion.pages.update({
-    page_id,
-    properties: updatableProperties(task),
-  });
+export async function updateTaskPage(page: PageObjectResponse, task: TaskWithRelations, notion: Client) {
+  const currentProperties = generatePageProperties(task);
+  for (const [name, notionProperty] of Object.entries(page.properties)) {
+    if (currentProperties[name] === undefined) {
+      delete currentProperties[name];
+      continue;
+    }
+    if (isSubsetConsideringDate(notionProperty, currentProperties[name], notionProperty.type)) {
+      delete currentProperties[name];
+    }
+  }
+  const keysToUpdate = Object.keys(currentProperties);
+  // @ts-ignore
+  if (keysToUpdate.length > 0) await notion.pages.update({ page_id: page.id, properties: currentProperties });
+  return keysToUpdate;
 }
