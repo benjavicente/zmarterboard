@@ -1,0 +1,79 @@
+datasource db {
+    provider = "sqlite"
+    url      = "file:./db.sqlite?connection_limit=1"
+}
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+model Member {
+    id       String    @id
+    name     String
+    email    String
+    projects Project[]
+    tasks    Task[]
+}
+
+model Folder {
+    id   String @id
+    name String
+    uid  String
+}
+
+model Project {
+    id      String   @id
+    name    String
+    members Member[]
+    boards  Board[]
+}
+
+model Board {
+    id          String   @id
+    name        String
+    description String?
+    position    Int
+    columns     Column[]
+    project     Project  @relation(fields: [pid], references: [id])
+    pid         String
+    labels      Label[]
+    Task        Task[]
+}
+
+model Column {
+    id       String @id
+    name     String
+    position Int
+    tasks    Task[]
+    bid      String
+    board    Board? @relation(fields: [bid], references: [id])
+}
+
+model Task {
+    id              String    @id
+    bid             String
+    board           Board     @relation(fields: [bid], references: [id])
+    completed       Boolean?
+    description     String?
+    position        Int
+    name            String
+    total_hours     Float?    @default(0)
+    created_at      DateTime
+    estimated_hours Float?    @default(0)
+    labels          Label[]
+    assigned        Member[]
+    column          Column    @relation(fields: [cid], references: [id])
+    cid             String
+    priority        Int
+    starting_date   DateTime?
+    deadline        DateTime?
+}
+
+model Label {
+    bid   String
+    board Board? @relation(fields: [bid], references: [id])
+    id    String @id
+    name  String
+    color String
+    tasks Task[]
+}

@@ -1,0 +1,6 @@
+.env
+.venv
+db.sqlite
+node_modules
+poetry.lock
+pyproject.toml

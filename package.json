@@ -1,0 +1,31 @@
+{
+  "name": "zmarterboard",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "zmarterboard": "src/bin.ts"
+  },
+  "scripts": {
+    "upload": "ts-node src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/yargs": "^17.0.13",
+    "prisma": "^4.3.1"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.0",
+    "@prisma/client": "^4.3.1",
+    "@types/node": "^18.7.18",
+    "axios": "^0.27.2",
+    "dotenv": "^16.0.2",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.8.3",
+    "yargs": "^17.5.1",
+    "yup": "^0.32.11"
+  }
+}
