@@ -49,7 +49,7 @@ export async function updateTaskNotionDatabase(database_id: string, tasks: TaskW
     database_id,
     description: [
       { text: { content: "Last updated: " } },
-      { text: { content: new Date().toDateString() }, annotations: { bold: true } },
+      { text: { content: new Date().toLocaleString() }, annotations: { bold: true } },
     ],
   });
   console.info("Updated Notion Database");
