@@ -3,7 +3,7 @@ import axios from "axios";
 import * as R from "./responses.js";
 
 const client = new axios.Axios({
-  baseURL: "https://api.zmartboard.cl/api/",
+  baseURL: process.env.zmartboard_url || "https://api.zmartboard.cl/api/",
   transformResponse: (data) => JSON.parse(data),
   headers: {
     "access-token": process.env.zmartboard_token || "",
