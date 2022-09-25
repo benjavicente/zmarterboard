@@ -15,7 +15,7 @@ const client = new axios.Axios({
   },
 });
 
-export function refreshTask(task: R.Task, prisma: PrismaClient) {
+export async function refreshTask(task: R.Task, prisma: PrismaClient) {
   const { id, name, description, board_id, column_id, labels, created_at, position, ...t } = task;
   const { starting_date, priority, deadline, assigned, estimated_hours, total_hours, completed } = t;
   const updatable = {
@@ -33,74 +33,64 @@ export function refreshTask(task: R.Task, prisma: PrismaClient) {
     column: { connect: { id: column_id } },
     assigned: { connect: assigned.map((member_id) => ({ id: member_id })) },
   };
-  return prisma.task.upsert({ where: { id }, create: { ...updatable, id }, update: updatable });
+  await prisma.task.upsert({ where: { id }, create: { ...updatable, id }, update: updatable });
 }
 
 export async function refreshColumn({ id, name, position }: R.Column, board: Board, prisma: PrismaClient) {
-  return await prisma.column.upsert({
+  await prisma.column.upsert({
     where: { id },
     update: { name, position },
     create: { id, position, name, board: { connect: { id: board.id } } },
   });
 }
 
-export async function refreshBoard(bd: R.Board, project: Project, prisma: PrismaClient) {
+export async function refreshBoard(bd: R.Board, cd: R.Column[], td: R.Task[], prisma: PrismaClient) {
   const { id, description, name, position } = bd;
-  const updatable = {
-    name,
-    position,
-    description,
-    project: { connect: { id: project.id } },
-  };
-  const board = await prisma.board.upsert({
-    where: { id },
-    update: updatable,
-    create: { id, ...updatable },
-  });
-  const [{ data: columns_data }, { data: tasks_data }] = await Promise.all([
-    client.get<R.Column[]>(`/boards/${id}/columns`),
-    client.get<R.Task[]>(`/boards/${id}/tasks`),
-  ]);
-  const columns: Awaited<ReturnType<typeof refreshColumn>>[] = [];
-  for (const column of columns_data) {
-    columns.push(await refreshColumn(column, board, prisma));
-  }
-  const tasks: Awaited<ReturnType<typeof refreshTask>>[] = [];
-  for (const task of tasks_data) {
-    tasks.push(await refreshTask(task, prisma));
-  }
-  return { board, columns, tasks };
+  const updatable = { name, position, description, project: { connect: { id: bd.project_id } } };
+  const board = await prisma.board.upsert({ where: { id }, update: updatable, create: { id, ...updatable } });
+
+  // Can't use Promise.all because of the SQLite timeout
+  for (const column of cd) await refreshColumn(column, board, prisma);
+  for (const task of td) await refreshTask(task, prisma);
 }
 
 export async function refreshMember({ id, name, email }: R.SingleMember, project: Project, prisma: PrismaClient) {
-  return await prisma.member.upsert({
+  await prisma.member.upsert({
     where: { id },
     update: { name, email, projects: { connect: { id: project.id } } },
     create: { id, name, email, projects: { connect: { id: project.id } } },
   });
 }
 
-export async function refreshProject({ id, name }: R.Project, prisma: PrismaClient) {
-  const project = await prisma.project.upsert({
-    where: { id },
-    update: { name },
-    create: { id, name },
-  });
+const requestBoardStuff = (bd: R.Board) =>
+  Promise.all([bd, client.get<R.Column[]>(`/boards/${bd.id}/columns`), client.get<R.Task[]>(`/boards/${bd}/tasks`)]);
 
-  const { members: members_data } = (await client.get<R.Members>(`/projects/${id}/members`)).data;
-  const members: Member[] = [];
-  for (const member of members_data) {
-    members.push(await refreshMember(member, project, prisma));
+async function refreshProject({ id, name }: Project, prisma: PrismaClient) {
+  console.info(`Querying boards of ${name}...`);
+  const boards_data = (await client.get<R.Board[]>(`/projects/${id}/boards`)).data;
+  const board_stuff = await Promise.all(boards_data.map(requestBoardStuff));
+  console.info(`Done querying boards of ${name}, saving data to the database...`);
+
+  for (const [bd, column_response, tasks_response] of board_stuff) {
+    await refreshBoard(bd, column_response.data, tasks_response.data, prisma);
   }
-  const board_data = (await client.get<R.Board[]>(`/projects/${id}/boards`)).data;
-  const boards: Awaited<ReturnType<typeof refreshBoard>>[] = [];
-  for (const board of board_data) {
-    boards.push(await refreshBoard(board, project, prisma));
-  }
-  return { project, members, boards };
+}
+
+export async function refreshProjectByName(name: string, prisma: PrismaClient) {
+  const project = await prisma.project.findFirst({ where: { name } });
+  if (!project) throw new Error(`Project ${name} not found`);
+  await refreshProject(project, prisma);
 }
 
 export async function refreshDataAllProjects(prisma: PrismaClient) {
-  const project_data = (await client.get<R.Project[]>("/projects")).data;
-  return await Promise.all(project_data.map((project) => refreshProject(project, prisma)));
+  const projects_data = (await client.get<R.Project[]>("/projects")).data;
+  for (const project_data of projects_data) {
+    const { id, name } = project_data;
+    const project = await prisma.project.upsert({ where: { id }, update: { name }, create: { id, name } });
+
+    const { members: members_data } = (await client.get<R.Members>(`/projects/${project_data.id}/members`)).data;
+    for (const member of members_data) await refreshMember(member, project_data, prisma);
+
+    await refreshProject(project, prisma);
+  }
 }

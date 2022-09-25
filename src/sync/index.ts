@@ -9,6 +9,8 @@ export async function updateTaskNotionDatabase(database_id: string, tasks: TaskW
   const database = await notion.databases.retrieve({ database_id });
   await resetDatabasePropertiesIfInvalid(database, notion);
 
+  console.info("Updating Notion database...");
+
   let should_query_more = true;
   let start_cursor: string | undefined = undefined;
   let created = 0,
