@@ -2,7 +2,7 @@ import { UpdateDatabaseParameters } from "@notionhq/client/build/src/api-endpoin
 
 export type UpdateDatabaseProperties = UpdateDatabaseParameters["properties"];
 
-const estimated_hours_expression = 'if(empty(prop("created_at")),prop("starting_date"),prop("created_at"))';
+const estimated_hours_expression = 'if(empty(prop("task_created_at")),prop("starting_date"),prop("task_created_at"))';
 const percentage_work_expression =
   'if(empty(prop("estimated_hours")),0,round((prop("total_hours")/prop("estimated_hours"))*100))';
 
