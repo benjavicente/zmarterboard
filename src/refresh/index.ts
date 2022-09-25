@@ -83,6 +83,7 @@ export async function refreshProjectByName(name: string, prisma: PrismaClient) {
 }
 
 export async function refreshDataAllProjects(prisma: PrismaClient) {
+  console.info("Querying projects...");
   const projects_data = (await client.get<R.Project[]>("/projects")).data;
   for (const project_data of projects_data) {
     const { id, name } = project_data;

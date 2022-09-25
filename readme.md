@@ -2,8 +2,8 @@
 
 Zmartboard es un scrapper para sincronizar de tareas de Zmartboard a Notion.
 
-Fue creado para trabajar con la información de Zmartboard de una mejor
-manera, dado que Zmartboard no tiene buen UI/UX y no tiene formas de filtrar
+Fue creado para trabajar con la información de Zmartboard de una mejor manera,
+dado que Zmartboard no tiene buen UI/UX y no tiene formas de filtrar
 u obtener estadísticas personalizadas.
 
 Al scrappear la información (guardándola en SQLite) y usar Notion se aprovecha de:
@@ -11,6 +11,8 @@ Al scrappear la información (guardándola en SQLite) y usar Notion se aprovecha
 - Tener maneras de filtrar y obtener estadísticas personalizadas con SQL
 - Crear vistas personalizadas con Notion
 - Poder usar un UI/UX decente para trabajar con la información
+
+Luego de la primera carga, **actualizar los datos toma menos de 1 segundo** ⚡
 
 ## Instalación
 
@@ -53,9 +55,10 @@ pnpm install -g ts-node
 Una vez hecho eso, se puede correr el script con:
 
 ```bash
-zmarterboard refresh  # para obtener los datos de Zmartboard
-zmarterboard sync     # para sincronizar los datos con Notion
+zmarterboard all
 ```
+
+Usa `zmarterboard --help` para ver los comandos disponibles.
 
 ## Por hacer
 

@@ -46,7 +46,7 @@ const cli = yargs(hideBin(process.argv))
   .scriptName("zmarterboard")
   .option("project", { alias: "p", type: "string", description: "Project name to use" })
   .command("sync", "Sync data with Notion", (ctx) => ctx.argv, sync)
-  .command("refresh", "Refresh data (use project name for a speedup)", (ctx) => ctx.argv, refresh)
+  .command("refresh", "Refresh data (use project name for a small speedup)", (ctx) => ctx.argv, refresh)
   .command("all", "Refresh data and sync with Notion", (ctx) => ctx.argv, all)
   .demandCommand()
   .strict();
