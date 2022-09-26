@@ -63,10 +63,20 @@ export async function createTaskPage(database_id: string, task: TaskWithRelation
 const maxDelta = 1000 * 60 * 60 * 24; // 1 day
 function isSubsetConsideringDate(obj_set: {}, obj_that_might_be_subset: {}, type: string) {
   if (type === "date") {
+    if (obj_set[type] === null && _.isObject(obj_that_might_be_subset[type])) return false;
+
     // Difference of only 12 hours is considered the same date
     const delta = new Date(obj_set[type].start).getTime() - new Date(obj_that_might_be_subset[type].start).getTime();
     return Math.abs(delta) < maxDelta;
   }
+
+  const obj_value = obj_set[type];
+  const obj_subset_value = obj_that_might_be_subset[type];
+
+  // Simple comparison if is not an object or list
+  if (!_.isObject(obj_value) && !_.isArray(obj_value)) return obj_value === obj_subset_value;
+
+  // If is an object or list, check if is a subset
   return _.isMatch(obj_set[type], obj_that_might_be_subset[type]);
 }
 
