@@ -1,4 +1,4 @@
-import { Board, Member, PrismaClient, Project } from "@prisma/client";
+import { Board, PrismaClient, Project } from "@prisma/client";
 import axios from "axios";
 import * as R from "./responses.js";
 
@@ -15,7 +15,7 @@ const client = new axios.Axios({
   },
 });
 
-export async function refreshTask(task: R.Task, prisma: PrismaClient) {
+export function refreshTask(task: R.Task, prisma: PrismaClient) {
   const { id, name, description, board_id, column_id, labels, created_at, position, ...t } = task;
   const { starting_date, priority, deadline, assigned, estimated_hours, total_hours, completed } = t;
   const updatable = {
@@ -33,11 +33,11 @@ export async function refreshTask(task: R.Task, prisma: PrismaClient) {
     column: { connect: { id: column_id } },
     assigned: { connect: assigned.map((member_id) => ({ id: member_id })) },
   };
-  await prisma.task.upsert({ where: { id }, create: { ...updatable, id }, update: updatable });
+  return prisma.task.upsert({ where: { id }, create: { ...updatable, id }, update: updatable });
 }
 
-export async function refreshColumn({ id, name, position }: R.Column, board: Board, prisma: PrismaClient) {
-  await prisma.column.upsert({
+export function refreshColumn({ id, name, position }: R.Column, board: Board, prisma: PrismaClient) {
+  return prisma.column.upsert({
     where: { id },
     update: { name, position },
     create: { id, position, name, board: { connect: { id: board.id } } },
@@ -63,7 +63,7 @@ export async function refreshMember({ id, name, email }: R.SingleMember, project
 }
 
 const requestBoardStuff = (bd: R.Board) =>
-  Promise.all([bd, client.get<R.Column[]>(`/boards/${bd.id}/columns`), client.get<R.Task[]>(`/boards/${bd}/tasks`)]);
+  Promise.all([bd, client.get<R.Column[]>(`/boards/${bd.id}/columns`), client.get<R.Task[]>(`/boards/${bd.id}/tasks`)]);
 
 async function refreshProject({ id, name }: Project, prisma: PrismaClient) {
   console.info(`Querying boards of ${name}...`);
