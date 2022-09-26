@@ -2,9 +2,12 @@ import { UpdateDatabaseParameters } from "@notionhq/client/build/src/api-endpoin
 
 export type UpdateDatabaseProperties = UpdateDatabaseParameters["properties"];
 
-const estimated_hours_expression = 'if(empty(prop("task_created_at")),prop("starting_date"),prop("task_created_at"))';
+const estimated_initial_hours_expression =
+  'if(empty(prop("starting_date")), prop("task_created_at"), prop("starting_date"))';
 const percentage_work_expression =
-  'if(empty(prop("estimated_hours")),0,round((prop("total_hours")/prop("estimated_hours"))*100))';
+  'if(empty(prop("estimated_hours")), 0, round((prop("total_hours") / prop("estimated_hours")) * 100))';
+const estimated_deadline_expression =
+  'if(empty(prop("deadline")), dateAdd(prop("estimated_initial_date"), 7, "days"), prop("deadline"))';
 
 export type UpdatableProperties = {
   id: { rich_text: { text: { content: string } }[] };
@@ -38,8 +41,9 @@ export const zmarterboardProperties = {
   members: { multi_select: {} },
   board: { select: {} },
   column: { select: {} },
-  estimated_initial_date: { formula: { expression: estimated_hours_expression } },
   percentage_work: { formula: { expression: percentage_work_expression } },
+  estimated_initial_date: { formula: { expression: estimated_initial_hours_expression } },
+  estimated_deadline: { formula: { expression: estimated_deadline_expression } },
 } as const;
 
 export type ZmarterboardDBProperties = Record<keyof UpdatableProperties, {}> & { [key: string]: {} };
