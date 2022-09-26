@@ -26,7 +26,7 @@ export function refreshTask(task: R.Task, prisma: PrismaClient) {
     priority,
     starting_date,
     estimated_hours: +(estimated_hours || 0),
-    completed,
+    completed: !!completed,
     total_hours: +(total_hours || 0),
     deadline,
     board: { connect: { id: board_id } },
@@ -48,6 +48,12 @@ export async function refreshBoard(bd: R.Board, cd: R.Column[], td: R.Task[], pr
   const { id, description, name, position } = bd;
   const updatable = { name, position, description, project: { connect: { id: bd.project_id } } };
   const board = await prisma.board.upsert({ where: { id }, update: updatable, create: { id, ...updatable } });
+
+  // Mark as archived tasks that are not in the response
+  await prisma.task.updateMany({
+    where: { board: { id: board.id }, NOT: { id: { in: td.map((t) => t.id) } } },
+    data: { archived: true, completed: true },
+  });
 
   // Can't use Promise.all because of the SQLite timeout
   for (const column of cd) await refreshColumn(column, board, prisma);

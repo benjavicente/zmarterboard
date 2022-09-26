@@ -53,7 +53,8 @@ model Task {
     id              String    @id
     bid             String
     board           Board     @relation(fields: [bid], references: [id])
-    completed       Boolean?
+    completed       Boolean   @default(false)
+    archived        Boolean   @default(false)
     description     String?
     position        Int
     name            String

@@ -13,6 +13,7 @@ export type UpdatableProperties = {
   id: { rich_text: { text: { content: string } }[] };
   name: { title: { text: { content: string } }[] };
   completed: { checkbox: boolean };
+  archived: { checkbox: boolean };
   estimated_hours: { number: number | null };
   total_hours: { number: number | null };
   description: { rich_text: { text: { content: string } }[] };
@@ -32,6 +33,7 @@ export const zmarterboardProperties = {
   description: { rich_text: {} },
   position: { number: {} },
   completed: { checkbox: {} },
+  archived: { checkbox: {} },
   estimated_hours: { number: {} },
   total_hours: { number: {} },
   task_created_at: { date: {} },
